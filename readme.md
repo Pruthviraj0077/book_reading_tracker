@@ -1,0 +1,1 @@
+This application helps you to track the book you want to read according to your target. With this you track pages you read pages you have remaining no. of days you left to read and pages/per days to acheive your target set by you to finish this book. so it will help you to keep track of everything so you can so many books with this. 
