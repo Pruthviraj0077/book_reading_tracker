@@ -62,30 +62,32 @@ class Book:
                 print(self.cursor.rowcount , "Record Inserted.")
 
             if choice == 2:
-                total_pages_read = int(input("Enter pages you read today:- "))
+        
                 book_id = int(input("Enter your book id:- "))
                 sql = """select days,last_read_date,total_book_pages,pages_read,pages_remaining from books where book_id = %s"""
-
                 self.cursor.execute(sql,(book_id,))
                 results = self.cursor.fetchone()
                 days, last_read_date, total_book_pages, pages_read, pages_reamining = results
-                pages_reamining = total_book_pages - (total_pages_read + pages_read)
-                days_remaining = days - (date.today() - last_read_date).days
-                pages_per_day = round(pages_reamining/days_remaining,2)
-                sql = """update books 
-                        set 
-                        pages_read = pages_read + %s, days_remaining = %s, pages_remaining = %s, pages_per_day = %s 
-                        where book_id = %s"""
-                values = (total_pages_read,days_remaining,pages_reamining,pages_per_day,book_id)
-                self.cursor.execute(sql,values)
-                self.connection.commit()
-                print(self.cursor.rowcount,"Record Inserted.")
+                if pages_read >= total_book_pages:
+                    print("Congratulations you completed the book ")
+                else:
+                    total_pages_read = int(input("Enter pages you read today:- "))
+                    pages_reamining = total_book_pages - (total_pages_read + pages_read)
+                    days_remaining = days - (date.today() - last_read_date).days
+                    pages_per_day = round(pages_reamining/days_remaining,2)
+                    sql = """update books 
+                            set 
+                            pages_read = pages_read + %s, days_remaining = %s, pages_remaining = %s, pages_per_day = %s 
+                            where book_id = %s"""
+                    values = (total_pages_read,days_remaining,pages_reamining,pages_per_day,book_id)
+                    self.cursor.execute(sql,values)
+                    self.connection.commit()
+                    print(self.cursor.rowcount,"Record Inserted.")
 
             if choice == 3:
                 book_id = int(input("Enter your book id:- "))
                 sql = """select * from books
                         where book_id = %s"""
-                # values = (book_id,)
                 self.cursor.execute(sql,(book_id,))
                 results = self.cursor.fetchall()
                 if results:
