@@ -1,104 +1,86 @@
+from flask import Flask, render_template, request, redirect, url_for
 import mysql.connector
-from datetime import datetime,date
-from config import DB_HOST, DB_NAME, DB_PASS, DB_USER
-class Book:
-    def __init__(self):
-        self.connection = mysql.connector.connect(
-            host = DB_HOST,
-            user = DB_USER,
-            password = DB_PASS,
-            database = DB_NAME
-        )
+from datetime import datetime, date
+from config import DB_HOST, DB_USER, DB_PASS, DB_NAME
 
-        if self.connection.is_connected:
-            print("connected to database successfully")
-            self.cursor = self.connection.cursor()
-            self.cursor.execute("show tables;")
-            results = self.cursor.fetchall()
-            for row in results:
-                print(row)
+app = Flask(__name__)
 
-        create_table_query = """
-            CREATE TABLE IF NOT EXISTS books (
-                    book_id INT AUTO_INCREMENT PRIMARY KEY,
-                    book_name VARCHAR(255) NOT NULL,
-                    author VARCHAR(255),
-                    total_book_pages INT NOT NULL,
-                    days INT NOT NULL,
-                    last_read_date DATE,
-                    pages_read INT NOT NULL DEFAULT 0,
-                    days_remaining INT,
-                    pages_remaining INT,
-                    pages_per_day FLOAT
-                );
-                """
+def get_db_connection():
+    return mysql.connector.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASS,
+        database=DB_NAME
+    )
 
-        self.cursor.execute(create_table_query)
-        self.connection.commit()
+@app.route('/')
+def home():
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM books")
+    books = cursor.fetchall()
+    connection.close()
+    return render_template("progress.html", books=books)
 
-        print("✅ Table 'books' created successfully!")
-    def add_book(self):
-        while True:    
-            print("1.add_book\n2.update_progress\n3.view_progress\n4.exit")
-            choice = int(input("Enter your choice:- "))
-            if choice == 1:
+@app.route('/add_book', methods=['GET', 'POST'])
+def add_book():
+    if request.method == 'POST':
+        book_name = request.form['book_name']
+        author = request.form['author']
+        total_book_pages = int(request.form['total_book_pages'])
+        days = int(request.form['days'])
+        last_read_date = datetime.strptime(request.form['last_read_date'], "%Y-%m-%d").date()
+        pages_read = int(request.form['pages_read'])
 
-                book_name = input("Enter book name:- ")
-                author = input("Enter author name:- ")
-                total_book_pages = int(input("Enter no. of book pages:- "))
-                days = int(input("Enter the no. of days you want to finish this book:- "))
-                last_read_date = datetime.strptime(input("Enter the start date (YYYY-MM-DD): "), "%Y-%m-%d").date()
-                pages_read = int(input("Enter pages you read today:- "))
-                days_remaining = days - (date.today() - last_read_date).days
-                pages_reamining = total_book_pages - pages_read
-                pages_per_day = round(pages_reamining/days_remaining,2)
-                print(book_name,author,total_book_pages,days,last_read_date,pages_read,days_remaining,pages_reamining,pages_per_day)
+        days_remaining = days - (date.today() - last_read_date).days
+        pages_remaining = total_book_pages - pages_read
+        pages_per_day = round(pages_remaining / days_remaining, 2)
 
-                sql = """INSERT INTO books (book_name,author,total_book_pages,days,last_read_date,pages_read,
-                days_remaining,pages_remaining,pages_per_day)VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
-                values = (book_name,author,total_book_pages,days,last_read_date,pages_read,days_remaining,pages_reamining,pages_per_day)
-                self.cursor.execute(sql,values)
-                self.connection.commit()
-                print(self.cursor.rowcount , "Record Inserted.")
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        sql = """INSERT INTO books (book_name,author,total_book_pages,days,last_read_date,pages_read,
+                 days_remaining,pages_remaining,pages_per_day) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        values = (book_name, author, total_book_pages, days, last_read_date,
+                  pages_read, days_remaining, pages_remaining, pages_per_day)
+        cursor.execute(sql, values)
+        connection.commit()
+        connection.close()
 
-            if choice == 2:
-        
-                book_id = int(input("Enter your book id:- "))
-                sql = """select days,last_read_date,total_book_pages,pages_read,pages_remaining from books where book_id = %s"""
-                self.cursor.execute(sql,(book_id,))
-                results = self.cursor.fetchone()
-                days, last_read_date, total_book_pages, pages_read, pages_reamining = results
-                if pages_read >= total_book_pages:
-                    print("Congratulations you completed the book ")
-                else:
-                    total_pages_read = int(input("Enter pages you read today:- "))
-                    pages_reamining = total_book_pages - (total_pages_read + pages_read)
-                    days_remaining = days - (date.today() - last_read_date).days
-                    pages_per_day = round(pages_reamining/days_remaining,2)
-                    sql = """update books 
-                            set 
-                            pages_read = pages_read + %s, days_remaining = %s, pages_remaining = %s, pages_per_day = %s 
-                            where book_id = %s"""
-                    values = (total_pages_read,days_remaining,pages_reamining,pages_per_day,book_id)
-                    self.cursor.execute(sql,values)
-                    self.connection.commit()
-                    print(self.cursor.rowcount,"Record Inserted.")
+        return redirect(url_for('home'))
+    return render_template('add_book.html')
 
-            if choice == 3:
-                book_id = int(input("Enter your book id:- "))
-                sql = """select * from books
-                        where book_id = %s"""
-                self.cursor.execute(sql,(book_id,))
-                results = self.cursor.fetchall()
-                if results:
-                    print(results)
-                else:
-                    print("book not found")        
+@app.route('/update_progress', methods=['GET', 'POST'])
+def update_progress():
+    if request.method == 'POST':
+        book_id = int(request.form['book_id'])
+        total_pages_read = int(request.form['pages_read'])
 
-            if choice == 4:
-                break    
-        
-        
-        
-book_instance = Book()
-book_instance.add_book()
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("""SELECT days,last_read_date,total_book_pages,pages_read,pages_remaining
+                          FROM books WHERE book_id = %s""", (book_id,))
+        result = cursor.fetchone()
+        if result:
+            days, last_read_date, total_book_pages, pages_read, pages_remaining = result
+            if pages_read >= total_book_pages:
+                return "🎉 Congratulations! You already finished this book."
+
+            pages_remaining = total_book_pages - (total_pages_read + pages_read)
+            days_remaining = days - (date.today() - last_read_date).days
+            pages_per_day = round(pages_remaining / days_remaining, 2)
+
+            update_sql = """UPDATE books
+                            SET pages_read = pages_read + %s,
+                                days_remaining = %s,
+                                pages_remaining = %s,
+                                pages_per_day = %s
+                            WHERE book_id = %s"""
+            values = (total_pages_read, days_remaining, pages_remaining, pages_per_day, book_id)
+            cursor.execute(update_sql, values)
+            connection.commit()
+        connection.close()
+        return redirect(url_for('home'))
+    return render_template('update_progress.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)

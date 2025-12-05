@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book Progress Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+  <h2 class="text-center mb-4">📊 Your Book Progress</h2>
+
+  <div class="text-center mb-4">
+    <a href="/add_book" class="btn btn-primary">➕ Add Book</a>
+    <a href="/update_progress" class="btn btn-success">✏️ Update Progress</a>
+  </div>
+
+  <table class="table table-bordered shadow-sm text-center align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>ID</th>
+        <th>Book Name</th>
+        <th>Author</th>
+        <th>Progress</th>
+        <th>Pages Read</th>
+        <th>Remaining</th>
+        <th>Days Left</th>
+        <th>Pages/Day</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for book in books %}
+      {% set progress = ((book.pages_read / book.total_book_pages) * 100) | round(2) %}
+      <tr>
+        <td>{{ book.book_id }}</td>
+        <td>{{ book.book_name }}</td>
+        <td>{{ book.author }}</td>
+        <td>
+          <div class="progress" style="height: 22px;">
+            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                 role="progressbar" style="width: {{ progress }}%;"
+                 aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">
+              {{ progress }}%
+            </div>
+          </div>
+        </td>
+        <td>{{ book.pages_read }}</td>
+        <td>{{ book.pages_remaining }}</td>
+        <td>{{ book.days_remaining }}</td>
+        <td>{{ book.pages_per_day }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</body>
+</html>
